@@ -4,7 +4,7 @@
  * Replaces ethers dependency with raw Uint8Array handling.
  */
 
-import { decodeAllSync } from 'cbor-web';
+import cbor from 'cbor-web';
 import pako from 'pako';
 import { MAGIC_NUMBERS } from './constants.js';
 import type { MetaV1S, AssetSchema, VisualiserMetadata } from './types.js';
@@ -21,7 +21,7 @@ export function hexToBytes(hex: string): Uint8Array {
 
 /** Decode CBOR-encoded data (wrapper around cbor-web's decodeAllSync) */
 export function cborDecode(dataEncoded: Uint8Array | string): unknown {
-	return decodeAllSync(dataEncoded);
+	return cbor.decodeAllSync(dataEncoded);
 }
 
 /**
