@@ -3,6 +3,7 @@
  */
 
 import type { VisualiserMetadata } from './types.js';
+import { DEFAULT_IPFS_GATEWAY } from './constants.js';
 
 /** Parse a value to a number, stripping commas from strings */
 export function parseNumber(value: unknown): number {
@@ -98,6 +99,20 @@ export function parseCoordinate(value: unknown): number | null {
 		}
 	}
 	return null;
+}
+
+/** Resolve an IPFS CID or URL to a full gateway URL */
+export function resolveIpfsUrl(value: string, gateway?: string): string {
+	if (!value) return '';
+	// Already a full URL
+	if (value.startsWith('http://') || value.startsWith('https://')) return value;
+	// ipfs:// protocol
+	if (value.startsWith('ipfs://')) {
+		const cid = value.slice(7);
+		return `${gateway ?? DEFAULT_IPFS_GATEWAY}${cid}`;
+	}
+	// Bare CID
+	return `${gateway ?? DEFAULT_IPFS_GATEWAY}${value}`;
 }
 
 /** Format a UNIX timestamp (seconds) to a readable date string */

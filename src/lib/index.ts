@@ -6,6 +6,9 @@ export { default as StatsGrid } from './components/StatsGrid.svelte';
 export { default as ProductionChart } from './components/ProductionChart.svelte';
 export { default as RawDataModal } from './components/RawDataModal.svelte';
 export { default as AuditTrailModal } from './components/AuditTrailModal.svelte';
+export { default as ImageViewer } from './components/ImageViewer.svelte';
+export { default as DocumentsHub } from './components/DocumentsHub.svelte';
+export { default as AssetMediaTabs } from './components/AssetMediaTabs.svelte';
 
 // Types
 export type {
@@ -27,7 +30,7 @@ export {
 } from './decode.js';
 
 // Constants
-export { MAGIC_NUMBERS } from './constants.js';
+export { MAGIC_NUMBERS, DEFAULT_IPFS_GATEWAY, DEFAULT_RENDER_3D_CID } from './constants.js';
 
 // Utils
 export {
@@ -38,7 +41,8 @@ export {
 	getAssetNode,
 	parseCoordinate,
 	formatTimestamp,
-	formatYearMonth
+	formatYearMonth,
+	resolveIpfsUrl
 } from './utils.js';
 
 // Chart

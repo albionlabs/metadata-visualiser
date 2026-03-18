@@ -8,6 +8,7 @@
 	import ProductionChart from './ProductionChart.svelte';
 	import RawDataModal from './RawDataModal.svelte';
 	import AuditTrailModal from './AuditTrailModal.svelte';
+	import AssetMediaTabs from './AssetMediaTabs.svelte';
 
 	interface Props {
 		latest: VisualiserMetadata | null;
@@ -30,6 +31,10 @@
 
 		// Display toggles
 		showRawDataButton?: boolean;
+		showMediaTabs?: boolean;
+
+		// IPFS gateway for resolving CIDs to URLs
+		ipfsGateway?: string;
 
 		// Snippet injection points
 		headerActions?: Snippet;
@@ -52,6 +57,8 @@
 		formatAddress,
 		onRetry,
 		showRawDataButton = true,
+		showMediaTabs = true,
+		ipfsGateway,
 		headerActions,
 		tokenRightsExtra,
 		descriptionExtra,
@@ -264,6 +271,10 @@
 
 		{#if afterChart}
 			{@render afterChart()}
+		{/if}
+
+		{#if showMediaTabs}
+			<AssetMediaTabs metadata={latest} {ipfsGateway} />
 		{/if}
 	{/if}
 </div>
