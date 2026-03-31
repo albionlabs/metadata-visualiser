@@ -48,4 +48,5 @@ export interface VisualiserMetadata {
 	raw: MetaV1S;
 	error?: boolean;
 	timestamp?: number;
+	tokenTermsLink?: string;
 }
