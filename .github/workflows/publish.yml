@@ -17,15 +17,17 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
-      # Bundled npm with Node 22 hangs on `npm ci` because the `prepare` lifecycle
-      # invokes `publint` → `npm pack` → which re-runs `prepare` (the package.json
-      # has both `prepare` and `prepublishOnly` set to `npm run package`, and that
-      # script runs `publint`). Older npm releases (cf. v0.2.1 publish on
-      # 2026-03-31) tolerated this; npm 10.x with Node 22 does not. Pin to
-      # npm@11 which mirrors v0.2.1's environment and terminates the lifecycle
-      # recursion in a small number of cycles.
-      - run: npm install -g npm@11
-      - run: npm ci
+      # Skip `prepare`/`prepublish*` lifecycle on install because:
+      #   1. package.json has `prepare` AND `prepublishOnly` both set to
+      #      `npm run package`, and that script runs `publint` which itself
+      #      calls `npm pack`. npm 10 (bundled with Node 22) doesn't terminate
+      #      the resulting lifecycle recursion and hangs `npm ci` indefinitely.
+      #   2. The runner-image's bundled npm 10 currently can't `npm install -g
+      #      npm@<anything>` due to a missing `promise-retry` module, so we
+      #      can't upgrade out of the problem either.
+      # The workflow explicitly runs `npm run package` after `npm ci`, so
+      # skipping the prepare hook here is safe.
+      - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm test
       - run: npm run package
