@@ -9,6 +9,7 @@ export { default as AuditTrailModal } from './components/AuditTrailModal.svelte'
 export { default as ImageViewer } from './components/ImageViewer.svelte';
 export { default as DocumentsHub } from './components/DocumentsHub.svelte';
 export { default as AssetMediaTabs } from './components/AssetMediaTabs.svelte';
+export { default as SensitivityMatrix } from './components/SensitivityMatrix.svelte';
 
 // Types
 export type {
