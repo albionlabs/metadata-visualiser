@@ -25,6 +25,10 @@
 		"./types": {
 			"types": "./dist/types.d.ts",
 			"default": "./dist/types.js"
+		},
+		"./returns": {
+			"types": "./dist/returns.d.ts",
+			"default": "./dist/returns.js"
 		}
 	},
 	"files": [

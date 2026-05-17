@@ -17,6 +17,7 @@ export type {
 	AssetSchema,
 	VisualiserMetadata
 } from './types.js';
+export type { ReturnsMetadata, ProjectionEntry } from './returns.js';
 
 // Decode
 export {
