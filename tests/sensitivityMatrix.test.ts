@@ -82,11 +82,23 @@ describe('computeSensitivityMatrix — output shape', () => {
 });
 
 describe('computeSensitivityMatrix — Pitfall #4 sanity check', () => {
-	it('base case (WTI=80, hold=6Y) equals calculateLifetimeIRR within 1 bp for FIXTURE_FLAT_PRODUCTION', () => {
-		const out = computeSensitivityMatrix({
-			tokenMetadata: FIXTURE_FLAT_PRODUCTION,
-			...PARAMS.FLAT_PRODUCTION
-		});
+	// NPV-equivalence identity (RESEARCH §Pitfall #4 / line 633):
+	//
+	//   When the discount rate used to value the residual tail EQUALS the
+	//   project's true IRR, the truncate-with-terminal-NPV IRR ≡ lifetime IRR
+	//   (sum of two discounted halves both vanish at the IRR by definition).
+	//
+	//   When the discount rate ≠ IRR, the residual is the NPV at a *different*
+	//   rate, so the truncated-IRR drifts away from the lifetime IRR (overstated
+	//   when discountRate < IRR, understated when discountRate > IRR).
+	//
+	// The Pitfall #4 guard catches an exit-month-relative-vs-time-0 discounting
+	// bug: a time-0-relative implementation produces a residual that is
+	// orders-of-magnitude smaller, making the truncated IRR collapse far below
+	// the lifetime IRR. To test that guard cleanly, set the discount rate to
+	// the fixture's actual lifetime IRR so the math reduces to the NPV-identity
+	// — any deviation > 1 bp then necessarily flags a discounting bug.
+	it('base case (WTI=80, hold=6Y) equals calculateLifetimeIRR within 1 bp when discountRate == lifetime IRR (FIXTURE_FLAT_PRODUCTION)', () => {
 		const lifetime = calculateLifetimeIRR(
 			FIXTURE_FLAT_PRODUCTION,
 			80,
@@ -94,6 +106,12 @@ describe('computeSensitivityMatrix — Pitfall #4 sanity check', () => {
 			1,
 			PARAMS.FLAT_PRODUCTION.tokenPrice
 		);
+		const out = computeSensitivityMatrix({
+			tokenMetadata: FIXTURE_FLAT_PRODUCTION,
+			mintedSupply: PARAMS.FLAT_PRODUCTION.mintedSupply,
+			tokenPrice: PARAMS.FLAT_PRODUCTION.tokenPrice,
+			discountRate: lifetime // ← matches IRR; NPV identity holds
+		});
 		const base = getCell(out, 80, 6);
 		expect(base).toBeCloseTo(lifetime, 4);
 	});

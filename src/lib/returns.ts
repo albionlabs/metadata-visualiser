@@ -599,3 +599,123 @@ export function getSharePercentage(metadata: ReturnsMetadata): number {
 		typeof sharePercentageRaw === 'number' ? sharePercentageRaw : parseNumber(sharePercentageRaw);
 	return sharePercentage > 0 ? sharePercentage : 2.5; // Default to 2.5%
 }
+
+// ============================================================================
+// Sensitivity matrix (Phase 12 Plan 03)
+// ============================================================================
+
+export interface SensitivityMatrixInput {
+	tokenMetadata: ReturnsMetadata;
+	mintedSupply: number;
+	tokenPrice: number;
+	/** Annual percentage (e.g. 10 for 10%) — NOT decimal. */
+	discountRate: number;
+	wtiBuckets?: readonly number[];
+	holdPeriods?: readonly number[];
+	numberOfTokens?: number;
+}
+
+export interface SensitivityCell {
+	wti: number;
+	holdYears: number;
+	/** Annualized IRR as percentage, matching `calculateLifetimeIRR` shape; -99 for total loss. */
+	irr: number;
+}
+
+export interface SensitivityMatrixOutput {
+	cells: SensitivityCell[];
+	rowAverages: { wti: number; avgIrr: number }[];
+	buckets: { wti: readonly number[]; holdYears: readonly number[] };
+}
+
+const DEFAULT_WTI_BUCKETS = [60, 70, 80, 90, 100] as const;
+const DEFAULT_HOLD_PERIODS = [2, 4, 6, 8] as const;
+
+/**
+ * Computes a (WTI × hold-period) → annualized-IRR matrix for the given token.
+ *
+ * D-04 algorithm: for each (wti, holdYears) cell, truncate the lifetime
+ * cashflow series at month `holdYears * 12` and add a terminal cashflow equal
+ * to the NPV of the remaining months **discounted from the exit month**
+ * (NOT from time-zero — this is the Pitfall #4 guard from RESEARCH.md).
+ * Models "investor sells the token at fair value at exit."
+ *
+ * Edge cases (match `calculateLifetimeIRR` semantics):
+ *   - cf.length <= truncateAt: no remaining tail to discount; cell collapses
+ *     to lifetime IRR semantics on the un-truncated cashflow series.
+ *   - monthlyIRR <= -0.99: cell.irr = -99 (total-loss sentinel).
+ *
+ * @param input See {@link SensitivityMatrixInput}. `discountRate` is a PERCENT
+ *              (e.g. 10 for 10%), NOT a decimal — widget callers must multiply
+ *              their decimal rate by 100 before invoking this function.
+ */
+export function computeSensitivityMatrix(input: SensitivityMatrixInput): SensitivityMatrixOutput {
+	const {
+		tokenMetadata,
+		mintedSupply,
+		tokenPrice,
+		discountRate,
+		wtiBuckets = DEFAULT_WTI_BUCKETS,
+		holdPeriods = DEFAULT_HOLD_PERIODS,
+		numberOfTokens = 1
+	} = input;
+
+	const monthlyR = Math.pow(1 + discountRate / 100, 1 / 12) - 1;
+	const cells: SensitivityCell[] = [];
+
+	// Cashflows depend on wti only; compute once per WTI bucket.
+	const cashflowsByWti = new Map<number, number[]>();
+	for (const wti of wtiBuckets) {
+		const cf = getLifetimeCashflows(tokenMetadata, wti, mintedSupply, numberOfTokens, tokenPrice);
+		cashflowsByWti.set(wti, cf);
+	}
+
+	for (const wti of wtiBuckets) {
+		const cf = cashflowsByWti.get(wti)!;
+		for (const holdYears of holdPeriods) {
+			const truncateAt = holdYears * 12;
+			let irr: number;
+
+			if (cf.length <= truncateAt) {
+				// No truncation possible — fall back to lifetime IRR semantics.
+				irr = calculateLifetimeIRR(tokenMetadata, wti, mintedSupply, numberOfTokens, tokenPrice);
+			} else {
+				// Sum remaining months discounted at exit-month-relative rate (Pitfall #4).
+				let terminalNPV = 0;
+				for (let m = truncateAt + 1; m < cf.length; m++) {
+					terminalNPV += cf[m] / Math.pow(1 + monthlyR, m - truncateAt);
+				}
+				const truncated = cf.slice(0, truncateAt + 1);
+				truncated[truncateAt] = (cf[truncateAt] ?? 0) + terminalNPV;
+
+				if (truncated.length <= 1) {
+					irr = 0;
+				} else {
+					const monthlyIRR = calculateIRR(truncated);
+					if (monthlyIRR <= -0.99) {
+						irr = -99;
+					} else {
+						irr = (Math.pow(1 + monthlyIRR, 12) - 1) * 100;
+					}
+				}
+			}
+
+			cells.push({ wti, holdYears, irr });
+		}
+	}
+
+	const rowAverages = wtiBuckets.map((wti) => {
+		const rowCells = cells.filter((c) => c.wti === wti && Number.isFinite(c.irr));
+		const avgIrr =
+			rowCells.length === 0
+				? 0
+				: rowCells.reduce((sum, c) => sum + c.irr, 0) / rowCells.length;
+		return { wti, avgIrr };
+	});
+
+	return {
+		cells,
+		rowAverages,
+		buckets: { wti: wtiBuckets, holdYears: holdPeriods }
+	};
+}
