@@ -1,6 +1,8 @@
 <script lang="ts">
 	import MetadataVisualiser from '$lib/components/MetadataVisualiser.svelte';
+	import SensitivityMatrix from '$lib/components/SensitivityMatrix.svelte';
 	import type { VisualiserMetadata } from '$lib/types.js';
+	import { FIXTURE_FLAT_PRODUCTION } from '../../tests/fixtures/tokens';
 
 	// Mock data for development sandbox
 	const mockMetadata: VisualiserMetadata = {
@@ -78,6 +80,9 @@
 	];
 
 	let darkMode = $state(false);
+
+	// SensitivityMatrix preview state (Phase 12 verification — D-13)
+	let markWti = $state(82);
 </script>
 
 <div class="sandbox" class:dark={darkMode}>
@@ -139,6 +144,24 @@
 			{/snippet}
 		</MetadataVisualiser>
 	</div>
+
+	<section class="demo-section">
+		<h2>SensitivityMatrix preview (Phase 12)</h2>
+		<label>
+			markWti:
+			<input type="number" bind:value={markWti} min="40" max="120" step="1" />
+		</label>
+
+		<div class="albion-sensitivity-mount">
+			<SensitivityMatrix
+				tokenMetadata={FIXTURE_FLAT_PRODUCTION}
+				mintedSupply={100_000}
+				tokenPrice={1.0}
+				discountRate={0.1}
+				{markWti}
+			/>
+		</div>
+	</section>
 </div>
 
 <style>
@@ -182,5 +205,59 @@
 	.demo-wrapper {
 		max-width: 56rem;
 		margin: 0 auto;
+	}
+
+	.demo-section {
+		max-width: 56rem;
+		margin: 32px auto 0;
+		padding: 24px;
+		background: #080e1a;
+		color: #f1f5f9;
+		border-radius: 16px;
+	}
+
+	.demo-section h2 {
+		font-family: system-ui, sans-serif;
+		font-size: 18px;
+		font-weight: 600;
+		margin: 0 0 12px;
+	}
+
+	.demo-section label {
+		display: block;
+		margin-bottom: 16px;
+		font-family: system-ui, sans-serif;
+		font-size: 12px;
+		color: #94a3b8;
+	}
+
+	.demo-section input {
+		margin-left: 8px;
+		padding: 4px 8px;
+		font-size: 12px;
+		background: #131c2e;
+		color: #f1f5f9;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 6px;
+	}
+
+	/* Phase 10 token mapping per UI-SPEC §"Consumer overrides".
+	   albion.dex Phase 14 will reapply these via theme() in Tailwind. */
+	.albion-sensitivity-mount {
+		--mv-sens-cell: #f1f5f9;
+		--mv-sens-hot: #4ade80;
+		--mv-sens-hot-bg: rgba(74, 222, 128, 0.06);
+		--mv-sens-cold: #f87171;
+		--mv-sens-cold-bg: rgba(248, 113, 113, 0.06);
+		--mv-sens-mark: #d4a853;
+		--mv-sens-mark-bg: rgba(212, 168, 83, 0.14);
+		--mv-sens-mark-border: #8a6f37;
+		--mv-sens-avg-text: #64748b;
+		--mv-sens-line: rgba(255, 255, 255, 0.06);
+		--mv-sens-hdr-bg: rgba(19, 32, 64, 0.5);
+		--mv-text-muted: #94a3b8;
+		--mv-text-primary: #f1f5f9;
+		--mv-font-sans: 'Inter Tight', system-ui, sans-serif;
+		--mv-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 	}
 </style>
